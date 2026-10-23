@@ -11,7 +11,11 @@ if ($q !== '') {
     try {
         $results = db()->query($sql)->fetchAll();
     } catch (PDOException $e) {
-        $sqlError = $e->getMessage() . ' — query: ' . $sql;
+        if ($development) {
+            $sqlError = $e->getMessage() . ' — query: ' . $sql;
+        } else {
+            $sqlError = "Could not fetch search results.";
+        }
     }
 }
 
@@ -31,7 +35,7 @@ render_header('Search');
 <?php endif; ?>
 
 <?php if ($sqlError): ?>
-    <div class="alert alert-danger"><strong>Database error:</strong> <?= htmlspecialchars($sqlError) ?></div>
+    <div class="alert alert-danger"><?= htmlspecialchars($sqlError) ?></div>
 <?php endif; ?>
 
 <?php if ($q !== '' && !$results && !$sqlError): ?>

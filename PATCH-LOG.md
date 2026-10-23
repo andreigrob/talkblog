@@ -9,3 +9,6 @@ The profile page checks if the current user is the same as the profile being vie
 
 Patch #4: Fetch image only accepts valid URLs (A01 Broken Access Control Server Side Request Forgery)
 The fetch_image.php script now checks if the provided URL is valid before attempting to fetch the image. Fixes Lab 4 Finding #4.
+
+Patch #5: Search page displays a simple error message in production (A10 Mishandling of Exceptional Conditions)
+The search page now displays a simple error message in production instead of the SQL error message. Fixes Lab 4 Finding #5.
