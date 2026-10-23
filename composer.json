@@ -12,11 +12,11 @@
         "ext-pdo_sqlite": "*"
     },
     "scripts": {
-        "start": "php -S localhost:8000 -t public",
+        "start": "php -S localhost:8001 -t public",
         "reset-db": "php database/build_db.php"
     },
     "scripts-descriptions": {
-        "start": "Start the forum on http://localhost:8000",
+        "start": "Start the forum on http://localhost:8001",
         "reset-db": "Rebuild and re-seed the SQLite database"
     }
 }
