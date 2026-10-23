@@ -5,5 +5,7 @@ Patch #2: Strip HTML tags from topic and comment texts (A05 Injection Cross Site
 Replaces the topic and comment texts with versions that have most HTML tags stripped out. Fixes Lab 4 Finding #2.
 
 Patch #3: Profile page only displays form for current user and only accepts post requests for current user (A01 Broken Access Control Insecure Direct Object Reference)
-Ensures that the profile page only displays the form for the current user and only accepts post requests for the current user. Fixes Lab 4 Finding #3.
+The profile page checks if the current user is the same as the profile being viewed and only displays the form for editing the profile if they are the same. It also only accepts post requests for updating the profile if the current user is the same as the profile being viewed. Fixes Lab 4 Finding #3.
 
+Patch #4: Fetch image only accepts valid URLs (A01 Broken Access Control Server Side Request Forgery)
+The fetch_image.php script now checks if the provided URL is valid before attempting to fetch the image. Fixes Lab 4 Finding #4.

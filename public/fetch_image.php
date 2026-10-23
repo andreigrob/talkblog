@@ -3,9 +3,23 @@ require_once __DIR__ . '/../src/config.php';
 
 $url = $_GET['url'] ?? '';
 
-if ($url === '') {
+function valid_url(string $url): bool {
+    $parsed = parse_url($url);
+    if (!$parsed) {
+        return false;
+    }
+    if (!isset($parsed['scheme']) || !in_array($parsed['scheme'], ['http', 'https'])) {
+        return false;
+    }
+    if (!isset($parsed['host'])) {
+        return false;
+    }
+    return true;
+}
+
+if (!is_string($url) || !valid_url($url)) {
     http_response_code(400);
-    echo 'No url provided.';
+    echo 'No valid url provided.';
     exit;
 }
 
