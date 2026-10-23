@@ -91,3 +91,26 @@ function render_header(string $title = APP_NAME): void
         }
         return date('M j, Y g:i A', strtotime($ts));
     }
+
+    $allowed_html_tags = [
+        '<b>',
+        '<i>',
+        '<u>',
+        '<em>',
+        '<strong>',
+        '<blockquote>',
+        '<code>',
+        '<pre>',
+        '<a>',
+        '<p>',
+        '<br>',
+        '<ul>',
+        '<ol>',
+        '<li>',
+    ];
+
+    function strip_html_tags(string $html): string
+    {
+        global $allowed_html_tags;
+        return strip_tags($html, $allowed_html_tags);
+    }
