@@ -6,11 +6,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    $sql = "SELECT * FROM users
-            WHERE username = '$username' AND password = '$password'";
-
+    //$sql = "SELECT * FROM users WHERE username = '$username' AND password = '$password'";
+    $prepare_str = 'SELECT * FROM users WHERE username = ? AND password = ?';
     try {
-        $row = db()->query($sql)->fetch();
+        //$row = db()->query($sql)->fetch();
+        $stmt = db()->prepare($prepare_str);
+        $stmt->execute([$username, $password]);
+        $row = $stmt->fetch();
         if ($row) {
             $_SESSION['user_id'] = (int) $row['id'];
             header('Location: index.php');
