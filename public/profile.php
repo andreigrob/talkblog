@@ -3,7 +3,10 @@ require_once __DIR__ . '/../src/helpers.php';
 
 $id = $_GET['id'] ?? ($_POST['user_id'] ?? '');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && is_logged_in()) {
+$currentUser = current_user();
+$me = $currentUser['id'] === (int) $id;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $me) {
     $bio    = $_POST['bio'] ?? '';
     $userId = $_POST['user_id'] ?? '';
     $upd = db()->prepare('UPDATE users SET bio = ? WHERE id = ?');
@@ -27,7 +30,6 @@ $ts = db()->prepare('SELECT id, title, created_at FROM topics WHERE user_id = ? 
 $ts->execute([$id]);
 $topics = $ts->fetchAll();
 
-$me = current_user();
 render_header($profile['username'] . "'s profile");
 ?>
 <div class="row">
