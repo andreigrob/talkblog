@@ -21,6 +21,10 @@ const API_CORS_ALLOWED_ORIGINS = [
 
 function api_cors(): void
 {
+    // Responses differ by Origin, so every API response tells caches to key
+    // on it; a cache must never serve one origin's CORS headers to another.
+    header('Vary: Origin', false);
+
     $origin = $_SERVER['HTTP_ORIGIN'] ?? null;
 
     // Exact, type-strict string match against the allowlist (no substring,
