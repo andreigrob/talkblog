@@ -12,3 +12,9 @@ The fetch_image.php script now checks if the provided URL is valid before attemp
 
 Patch #5: Search page displays a simple error message in production (A10 Mishandling of Exceptional Conditions)
 The search.php script now displays a simple error message in production instead of the SQL error message. Fixes Lab 4 Finding #5.
+
+Patch #6: Content Security Policy findings fixed without 'unsafe-inline' (A02 Security Misconfiguration)
+Browsed every page while logged in with the DevTools Console open. The only CSP violation was the inline onclick="return confirm(...)" on the Delete topic link in topic.php (script-src-attr), reported on every topic page. It was replaced with a data-confirm attribute handled by a new external script, public/assets/app.js, loaded from render_footer(). Bootstrap 5.3.3 CSS and JS are now self-hosted in public/assets/vendor/bootstrap/ (checked against the official SRI hashes) instead of loaded from cdn.jsdelivr.net, so script-src and style-src are now just 'self'. Also added autocomplete attributes to the login and register inputs to clear the console's DOM warnings. After the changes every page loads with a clean console and zero CSP reports.
+
+Patch #7: API CORS restricted to an exact origin allowlist (A01 Broken Access Control)
+src/api/cors.php previously reflected any Origin header back in Access-Control-Allow-Origin with Access-Control-Allow-Credentials: true, so any website (including the null origin) could read a logged-in user's API data. api_cors() now uses an explicit allowlist containing only http://localhost:5173, matched with a strict exact comparison (in_array(..., true)); the null origin is always rejected. CORS headers, and the preflight Allow-Methods/Allow-Headers, are sent only to the allowed origin; any other origin gets no Access-Control-* headers. Every API response now carries Vary: Origin. DevTalk's own pages are same-origin and need no CORS.

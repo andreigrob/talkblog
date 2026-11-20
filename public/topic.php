@@ -55,7 +55,7 @@ render_header($topic['title']);
                     href="edit_topic.php?id=<?= (int) $topic['id'] ?>">Edit</a>
                 <a class="btn btn-sm btn-outline-danger"
                     href="delete_topic.php?id=<?= (int) $topic['id'] ?>"
-                    onclick="return confirm('Delete this topic?')">Delete</a>
+                    data-confirm="Delete this topic?">Delete</a>
             </div>
         <?php endif; ?>
     </div>

@@ -35,15 +35,15 @@ render_header('Register');
         <form method="post" class="card card-body shadow-sm">
             <div class="mb-3">
                 <label class="form-label">Username</label>
-                <input name="username" class="form-control" required>
+                <input name="username" class="form-control" autocomplete="username" required>
             </div>
             <div class="mb-3">
                 <label class="form-label">Email</label>
-                <input name="email" type="email" class="form-control" required>
+                <input name="email" type="email" class="form-control" autocomplete="email" required>
             </div>
             <div class="mb-3">
                 <label class="form-label">Password</label>
-                <input name="password" type="password" class="form-control" required>
+                <input name="password" type="password" class="form-control" autocomplete="new-password" required>
             </div>
             <button class="btn btn-primary">Register</button>
             <p class="small mt-3 mb-0">Already have an account? <a href="login.php">Log in</a>.</p>

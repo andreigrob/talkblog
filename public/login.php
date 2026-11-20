@@ -36,11 +36,11 @@ render_header('Log in');
         <form method="post" class="card card-body shadow-sm">
             <div class="mb-3">
                 <label class="form-label">Username</label>
-                <input name="username" class="form-control" autofocus>
+                <input name="username" class="form-control" autocomplete="username" autofocus>
             </div>
             <div class="mb-3">
                 <label class="form-label">Password</label>
-                <input name="password" type="password" class="form-control">
+                <input name="password" type="password" class="form-control" autocomplete="current-password">
             </div>
             <button class="btn btn-primary">Log in</button>
             <p class="small mt-3 mb-0">No account? <a href="register.php">Register</a>.</p>

@@ -1,0 +1,225 @@
+CST8265 Lab 8 - Answers
+=======================
+
+TOUR
+----
+
+Q: Open /api/me while not logged in. What do you get?
+A: HTTP 401  {"error": "Authentication required."}
+
+Q: Log in as alice and reload /api/me. What do you get, and why?
+A: HTTP 200 with alice's profile:
+   {"id": 2, "username": "alice", "email": "alice@devtalk.local",
+    "bio": "Front-end dev who loves CSS tricks.", "role": "user", ...}
+   The browser sent alice's PHPSESSID session cookie, and api_user() in
+   src/api/api.php falls back to $_SESSION['user_id'] when there is no Bearer token.
+
+Q: Open messages.php, sign in to Messages as alice and click a message.
+A: Works. The inbox lists alice's 3 messages; opening the first shows
+   "Re: Code review Friday?".
+
+
+PART A - TESTING THE SAME-ORIGIN POLICY (Test 1: read profile.php?id=2)
+------------------------------------------------------------------------
+
+Q: What does the attacker page report, and what does the Console show?
+A: "Test 1: the browser refused to let this page read the response."
+   Console: Access to fetch at 'http://localhost:8001/profile.php?id=2' from origin
+   'http://localhost:9000' has been blocked by CORS policy: No
+   'Access-Control-Allow-Origin' header is present on the requested resource.
+
+Q: In the Network tab, was the profile.php?id=2 request sent? Did it carry a Cookie header?
+A: Yes, it was sent, and yes, it carried alice's session cookie (Cookie: PHPSESSID=...).
+   Only the response was blocked from the page (corsError: MissingAllowOriginHeader).
+
+Q: In DevTalk's terminal, what status code did DevTalk return for GET /profile.php?id=2?
+A: 200. DevTalk processed the request as alice and returned her full profile page
+   (including her email). The Same-Origin Policy only stopped the attacker's script
+   from READING that response; the terminal shows a normal "[200]: GET /profile.php?id=2".
+
+
+PART A - EXPLOIT THE CORS MISCONFIGURATION (Tests 2 and 3, before the fix)
+--------------------------------------------------------------------------
+
+Q: What happened when you clicked Test 2 (/api/me) and Test 3 (/api/messages)?
+A: Both reads succeeded: the attacker page displayed alice's profile and her private
+   messages and posted them to collect.php.
+
+Q: What did the attacker's server collect (collect.php / stolen.log)?
+A: stolen.log contains, from the pre-fix run on 2026-11-13:
+   - /api/me: alice's id, username, email (alice@devtalk.local), bio, role, created_at.
+   - /api/messages: all 3 of alice's private messages, including bob's message
+     "Re: Code review Friday?" ("Heads up: the staging database password changed this
+     week..."), alice's "Code review Friday?" to bob, and admin's welcome message.
+   (A later entry from 2026-11-20 is the deliberate trusted-origin test from
+   localhost:5173 in the "Verify the fix" step.)
+
+Q: Which two Access-Control-... response headers let the attacker's page read /api/me?
+A: Access-Control-Allow-Origin: http://localhost:9000
+   Access-Control-Allow-Credentials: true
+   Together they tell the browser "this exact origin may read the response even
+   though it was sent with the victim's cookies".
+
+Q: What does src/api/cors.php do with the request's Origin header, and why does the
+   comment call it a "fix"?
+A: The original api_cors() copied whatever Origin header arrived straight into
+   Access-Control-Allow-Origin and added Access-Control-Allow-Credentials: true, and it
+   answered every preflight with the allowed methods and headers. The developer called
+   it a "fix" because it made the browser error go away ("Access-Control-Allow-Origin
+   must not be the wildcard '*' when the request's credentials mode is 'include'"). But
+   reflecting every origin with credentials is worse than the wildcard: it is a
+   wildcard that also works with cookies, so ANY website a logged-in user visits can
+   read their API data.
+
+Q: Why was alice's cookie sent at all?
+A: SameSite=Lax compares sites, not origins. localhost:8001 and localhost:9000 are
+   different origins but the same site (localhost), so the browser treated the
+   attacker's request as same-site and attached PHPSESSID. On the real internet
+   (attacker.example vs devtalk.example) Lax would have withheld the cookie. In this
+   lab the CORS policy was the only thing protecting alice's data.
+
+
+PART A - FIX THE CORS POLICY
+----------------------------
+
+api_cors() in src/api/cors.php was rewritten and committed as one commit per
+requirement (Lab 5 message format):
+  7f5ded3  Patch #A1: Replace reflected-origin CORS with an allowlist
+           - explicit allowlist containing exactly http://localhost:5173
+  1a2479b  Patch #A2: Match CORS origins by exact string comparison
+           - in_array($origin, API_CORS_ALLOWED_ORIGINS, true); no str_contains /
+             str_ends_with / strpos / regex
+  15cc908  Patch #A3: Never allow the null origin for CORS
+  ad55f49  Patch #A4: Send Vary: Origin on every API response
+  55abd62  Patch #A5: Answer CORS preflights only for allowed origins
+(all "(A02 Security Misconfiguration)")
+
+
+PART A - VERIFY THE FIX
+-----------------------
+
+Q: Reload cors.html (still logged in as alice) and run Tests 2 and 3. Copy the Console error.
+A: Both refused ("the browser refused to let this page read the response").
+   Console:
+   Access to fetch at 'http://localhost:8001/api/me' from origin 'http://localhost:9000'
+   has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present
+   on the requested resource.
+   Access to fetch at 'http://localhost:8001/api/messages' from origin
+   'http://localhost:9000' has been blocked by CORS policy: No
+   'Access-Control-Allow-Origin' header is present on the requested resource.
+   Screenshot: docs/screenshots/CORS-after-9000.png
+
+Q: Did GET /api/me still reach DevTalk, and with what status?
+A: Yes. GET /api/me (and /api/messages) still arrived with alice's PHPSESSID cookie and
+   DevTalk answered 200 with her data (response headers: Vary: Origin, no
+   Access-Control-Allow-Origin). The browser received the response and then refused
+   to give it to the attacker's script.
+
+Q: What does a CORS policy actually protect, and what does it not?
+A: CORS only controls whether a script on another origin may READ a response; it is
+   enforced by the browser after the server has already received and processed the
+   request. It does not stop a request from being sent, does not stop the server from
+   acting on it (e.g. a state-changing POST would still run), and does nothing against
+   non-browser clients, so CSRF protection and server-side authorization are still needed.
+
+Q: Run Test 2 from the allowlisted port (http://localhost:5173/). What happens?
+A: "Test 2: READ SUCCEEDED (HTTP 200)" - DevTalk returned
+   Access-Control-Allow-Origin: http://localhost:5173 with credentials, and alice's
+   profile was posted to stolen.log. Every origin on the allowlist can read logged-in
+   users' data, so the list must only contain origins we fully trust and control.
+   Screenshot: docs/screenshots/CORS-trusted-5173.png
+   (The attacker server was then stopped and restarted on port 9000.)
+
+Q: Regression check: does the Messages client still work?
+A: Yes. Signed in to Messages as alice: 3 messages listed, "Re: Code review Friday?"
+   opened, no Console errors. messages.php is same-origin, so it never needed CORS.
+   Screenshot: docs/screenshots/CORS-regression-messages.png
+
+
+PART B - THE SESSION COOKIE
+---------------------------
+
+Q: Record the PHPSESSID cookie's HttpOnly, Secure and SameSite values.
+A: HttpOnly: true
+   Secure:   false  (site runs over plain HTTP; 'secure' => true is commented out in
+                     src/helpers.php until DevTalk is served over HTTPS)
+   SameSite: Lax
+   (Also: session cookie, path "/", domain "localhost".)
+
+Q: Run document.cookie. Is PHPSESSID in the result? Why or why not?
+A: No. document.cookie returned "" (empty string). PHPSESSID is HttpOnly, so the
+   browser sends it with HTTP requests but never exposes it to JavaScript. An XSS
+   payload therefore cannot read and steal the session cookie.
+
+
+PART B - FIND THE TOKEN
+-----------------------
+
+Q: Where is the token stored and how is it sent?
+A: After signing in to Messages, Local Storage for http://localhost:8001 has one entry,
+   devtalk_token (a 244-character JWT starting "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...").
+   signIn() in public/assets/messages.js POSTs the username/password to /api/login and
+   stores the returned token with localStorage.setItem('devtalk_token', data.token).
+   api() reads it back on every call and sends it in an
+   "Authorization: Bearer <token>" request header.
+   Unlike the HttpOnly session cookie, localStorage is fully readable by any JavaScript
+   on the page, so an XSS bug could steal this token.
+
+
+PART B - DECODE IT LOCALLY
+--------------------------
+
+decode(header):  {"alg": "HS256", "typ": "JWT"}
+                 alg = HMAC-SHA256 signature, typ = token type JWT.
+
+decode(payload): {"iss": "devtalk", "sub": 2, "username": "alice",
+                  "email": "alice@devtalk.local", "role": "user",
+                  "iat": 1795213264, "exp": 1795242064}
+
+Q: List every claim in the payload and say what it means.
+A: iss      = issuer: who created the token ("devtalk").
+   sub      = subject: the user the token is about (alice's user id, 2). The API uses
+              this to look the user up.
+   username = alice's username.
+   email    = alice's email address.
+   role     = alice's role at the time the token was issued ("user").
+   iat      = issued at: Unix time the token was created
+              (Fri Nov 20 2026 17:21:04 EST).
+   exp      = expires: Unix time after which the token is rejected
+              (Sat Nov 21 2026 01:21:04 EST).
+
+Q: Which claims are personal information?
+A: email and username (directly identify alice), plus sub, which is a stable
+   identifier linking the token to her account. Because the payload is only base64url
+   ENCODED, anyone who gets the token (XSS, logs, a shared screenshot) can read them.
+
+Q: How long is the token valid?
+A: 8 hours (exp - iat = 28800 seconds; API_JWT_LIFETIME in src/api/jwt.php).
+   new Date(decode(payload).exp * 1000) -> Sat Nov 21 2026 01:21:04 GMT-0500.
+   There is no server-side logout for it: a stolen token keeps working until it expires.
+
+
+PART B - ENCODED IS NOT ENCRYPTED, BUT IT IS SIGNED
+---------------------------------------------------
+
+Q: Forge a copy of the token with role changed to admin and send it to /api/me.
+   Record the response.
+A: The forged payload decoded to {... "role": "admin" ...} with the original header and
+   signature. The response was:
+      HTTP 401  {"error": "Invalid or expired token."}
+   (Control: the unmodified token returns HTTP 200 with alice's profile, role "user".)
+
+Q: Which line in jwt_decode() (src/api/jwt.php) rejected the forged token?
+A: Line 64:
+      if ($given === false || !hash_equals($expected, $given)) {
+          return null;   // payload was changed, or signed with a different key
+      }
+   Line 62 recomputes the HMAC-SHA256 over the received "header.payload" using the
+   server's secret key (storage/jwt.key). Because the payload changed, the expected
+   signature no longer matches the signature copied from the real token, and
+   hash_equals() (a constant-time comparison) fails, so jwt_decode() returns null and
+   api_require_user() responds 401 "Invalid or expired token.". Without the secret key
+   the attacker cannot produce a valid signature for the modified payload.
+   Note: even a validly signed token would not grant admin here, because api_user()
+   only uses the sub claim to reload the user from the database, and api_role() takes
+   the role from the database's is_admin column, not from the token's role claim.

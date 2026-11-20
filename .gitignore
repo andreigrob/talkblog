@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/windows,macos,composer,visualstudiocode,jetbrains+all,sublimetext,nova
 # Edit at https://www.toptal.com/developers/gitignore?templates=windows,macos,composer,visualstudiocode,jetbrains+all,sublimetext,nova
 
+# Lab 8: JWT signing key and other runtime files
+storage/
+
 ### Composer ###
 composer.phar
 /vendor/
