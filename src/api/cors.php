@@ -21,10 +21,14 @@ const API_CORS_ALLOWED_ORIGINS = [
 
 function api_cors(): void
 {
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? null;
 
-    // Only origins on the allowlist may read responses with credentials.
-    if (in_array($origin, API_CORS_ALLOWED_ORIGINS)) {
+    // Exact, type-strict string match against the allowlist (no substring,
+    // suffix or regex matching).
+    $allowed = is_string($origin)
+        && in_array($origin, API_CORS_ALLOWED_ORIGINS, true);
+
+    if ($allowed) {
         header('Access-Control-Allow-Origin: ' . $origin);
         header('Access-Control-Allow-Credentials: true');
     }
