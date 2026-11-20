@@ -24,8 +24,10 @@ function api_cors(): void
     $origin = $_SERVER['HTTP_ORIGIN'] ?? null;
 
     // Exact, type-strict string match against the allowlist (no substring,
-    // suffix or regex matching).
+    // suffix or regex matching). The "null" origin (sandboxed iframes, file://,
+    // some redirects) is never allowed, even if someone adds it to the list.
     $allowed = is_string($origin)
+        && $origin !== 'null'
         && in_array($origin, API_CORS_ALLOWED_ORIGINS, true);
 
     if ($allowed) {
