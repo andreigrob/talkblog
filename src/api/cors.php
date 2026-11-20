@@ -4,17 +4,16 @@
  *
  * Called once, at the top of public/api/index.php, before any route runs.
  *
- * Background: DevTalk's product team plans a separate JavaScript front end
- * that will be developed at http://localhost:5173 and needs to call this API
- * from that origin. While testing it, a developer kept hitting the browser
- * error "The value of the 'Access-Control-Allow-Origin' header must not be
- * the wildcard '*' when the request's credentials mode is 'include'", and
- * "fixed" it with the code below.
+ * DevTalk's own pages (including messages.php) are on the same origin as the
+ * API and need no CORS. The only other origin allowed to read API responses
+ * is the product team's planned front end at http://localhost:5173.
  *
- * LAB 8, PART A: this is the file you fix.
+ * Previously this function reflected ANY Origin back with credentials, letting
+ * every website (and the "null" origin) read a logged-in user's API data.
+ * Fixed for Lab 8, Part A.
  */
 
-/** Origins allowed to read API responses cross-origin. */
+/** Origins allowed to read API responses cross-origin. Exact matches only. */
 const API_CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
 ];
@@ -40,11 +39,16 @@ function api_cors(): void
     }
 
     // Answer CORS preflight requests (sent by the browser before a PATCH,
-    // a JSON POST, or any request with an Authorization header).
+    // a JSON POST, or any request with an Authorization header). Only an
+    // allowed origin is told which methods and headers it may use; any other
+    // origin gets a bare 204 with no Access-Control-* headers, so the browser
+    // refuses to send the real request.
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        header('Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS');
-        header('Access-Control-Allow-Headers: Content-Type, Authorization');
-        header('Access-Control-Max-Age: 600');
+        if ($allowed) {
+            header('Access-Control-Allow-Methods: GET, POST, PATCH, OPTIONS');
+            header('Access-Control-Allow-Headers: Content-Type, Authorization');
+            header('Access-Control-Max-Age: 600');
+        }
         http_response_code(204);
         exit;
     }
